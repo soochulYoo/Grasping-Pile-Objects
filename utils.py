@@ -241,5 +241,50 @@ class Demo:
             pickle.dump(self.total_demos, handle, protocol=pickle.HIGHEST_PROTOCOL)
         demo_path = f'./demonstrations/{name}_policy_demo.pickle'
         return demo_path
-
+    
+    def make_progression_demo(self, policy_demo_path = None):
+        self.reset()
+        policy_demos = pickle.load(open(policy_demo_path, 'rb'))
+        for demo_idx in range(len(policy_demos)):
+            self.total_demos[demo_idx]['init_state_dict']['waypoint_pos'] = policy_demos[demo_idx]['init_state_dict']['waypoint_pos']
+            self.total_demos[demo_idx]['init_state_dict']['goal_pos'] = policy_demos[demo_idx]['init_state_dict']['goal_pos']
+            obj_pos = policy_demos[demo_idx]['init_state_dict']['obj_pos']
+            if self.num_objects == 1:
+                self.total_demos[demo_idx]['init_state_dict']['obj_pos'] = obj_pos
+            elif self.num_objects == 2:
+                self.total_demos[demo_idx]['init_state_dict']['obj_pos']= obj_pos
+                self.total_demos[demo_idx]['init_state_dict']['obj1_pos'] = np.array([obj_pos[0], obj_pos[1] + 0.02, obj_pos[2]])
+            elif self.num_objects == 3:
+                self.total_demos[demo_idx]['init_state_dict']['obj_pos']= obj_pos
+                self.total_demos[demo_idx]['init_state_dict']['obj1_pos'] = np.array([obj_pos[0], obj_pos[1] + 0.02, obj_pos[2]])
+                self.total_demos[demo_idx]['init_state_dict']['obj3_pos'] = np.array([obj_pos[0], obj_pos[1] + 0.01, obj_pos[2] + 0.035])
+            elif self.num_objects == 5:
+                self.total_demos[demo_idx]['init_state_dict']['obj_pos']= obj_pos
+                self.total_demos[demo_idx]['init_state_dict']['obj1_pos'] = np.array([obj_pos[0], obj_pos[1] + 0.02, obj_pos[2]])
+                self.total_demos[demo_idx]['init_state_dict']['obj3_pos'] = np.array([obj_pos[0], obj_pos[1] + 0.01, obj_pos[2] + 0.035])
+                self.total_demos[demo_idx]['init_state_dict']['obj2_pos'] = np.array([obj_pos[0], obj_pos[1] - 0.02, obj_pos[2]])
+                self.total_demos[demo_idx]['init_state_dict']['obj4_pos'] = np.array([obj_pos[0], obj_pos[1] - 0.01, obj_pos[2] + 0.035])
+            elif self.num_objects == 6:
+                self.total_demos[demo_idx]['init_state_dict']['obj_pos']= obj_pos
+                self.total_demos[demo_idx]['init_state_dict']['obj1_pos'] = np.array([obj_pos[0], obj_pos[1] + 0.02, obj_pos[2]])
+                self.total_demos[demo_idx]['init_state_dict']['obj3_pos'] = np.array([obj_pos[0], obj_pos[1] + 0.01, obj_pos[2] + 0.035])
+                self.total_demos[demo_idx]['init_state_dict']['obj2_pos'] = np.array([obj_pos[0], obj_pos[1] - 0.02, obj_pos[2]])
+                self.total_demos[demo_idx]['init_state_dict']['obj4_pos'] = np.array([obj_pos[0], obj_pos[1] - 0.01, obj_pos[2] + 0.035])
+                self.total_demos[demo_idx]['init_state_dict']['obj5_pos'] = np.array([obj_pos[0], obj_pos[1] , obj_pos[2] + 0.07])
+            self.total_demos[demo_idx]['actions'] = policy_demos[demo_idx]['actions']
         
+        name = None
+        if self.num_objects == 2:
+            name = 'Single_to_Double'
+        elif self.num_objects == 3:
+            name = 'Double_to_Triple'
+        elif self.num_objects == 5:
+            name = 'Triple_to_Penta'
+        elif self.num_objects == 6:
+            name = 'Penta_to_Hexa'
+        else:
+            raise NotImplementedError
+        with open(f'./demonstrations/{name}_policy_demo.pickle', 'wb') as handle:
+            pickle.dump(self.total_demos, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        demo_path = f'./demonstrations/{name}_policy_demo.pickle'
+        return demo_path
