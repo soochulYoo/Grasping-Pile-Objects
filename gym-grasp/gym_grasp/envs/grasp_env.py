@@ -18,8 +18,8 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         "render_fps": 20,
     }
     
-    def __init__(self):
-        self.N = 3 # number of objects
+    def __init__(self, N = 1):
+        self.N = N # number of objects
         self.S_grasp_sid = 0 # grasp site id
         self.hand_bid = 0
         self.obj_bid = 0 # object body id
@@ -35,20 +35,40 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         if self.N == 1:
             mujoco_env.MujocoEnv.__init__(self, curr_dir+'/assets/DAPG_box.xml', 5)
-            
+        
+        elif self.N == 2:
+            self.obj1_bid = 0
+            self.obj1_sid = 0
+            self.waypoint_check['Object1'] = 0
+            self.count_check['Object1'] = 0
 
         elif self.N == 3:
-            
             self.obj1_bid = 0
             self.obj3_bid = 0
-
             self.obj1_sid = 0
             self.obj3_sid = 0
-
             self.waypoint_check['Object1'] = 0
             self.waypoint_check['Object3'] = 0
             self.count_check['Object1'] = 0
             self.count_check['Object3'] = 0
+        
+        elif self.N == 5:
+            self.obj1_bid = 0
+            self.obj2_bid = 0
+            self.obj3_bid = 0
+            self.obj4_bid = 0
+            self.obj1_sid = 0
+            self.obj2_sid = 0
+            self.obj3_sid = 0
+            self.obj4_sid = 0
+            self.waypoint_check['Object1'] = 0
+            self.waypoint_check['Object2'] = 0
+            self.waypoint_check['Object3'] = 0
+            self.waypoint_check['Object4'] = 0
+            self.count_check['Object1'] = 0
+            self.count_check['Object2'] = 0
+            self.count_check['Object3'] = 0
+            self.count_check['Object4'] = 0
 
         elif self.N == 6:
             self.obj1_bid = 0
@@ -75,22 +95,34 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             self.count_check['Object5'] = 0   
         else:
             NotImplementedError
-        
-        if self.N == 3:
+
+        if self.N == 2:
+            mujoco_env.MujocoEnv.__init__(self, curr_dir+'/assets/DAPG_double_box.xml', 5)
+            self.obj1_bid = self.sim.model.body_name2id('Object1')
+            self.obj1_sid = self.sim.model.site_name2id('Object1')
+        elif self.N == 3:
             mujoco_env.MujocoEnv.__init__(self, curr_dir+'/assets/DAPG_multi_box.xml', 5)
             self.obj1_bid = self.sim.model.body_name2id('Object1')
             self.obj3_bid = self.sim.model.body_name2id('Object3')
             self.obj1_sid = self.sim.model.site_name2id('Object1')
             self.obj3_sid = self.sim.model.site_name2id('Object3')
+        elif self.N == 5:
+            mujoco_env.MujocoEnv.__init__(self, curr_dir+'/assets/DAPG_penta_box.xml', 5)
+            self.obj1_bid = self.sim.model.body_name2id('Object1')
+            self.obj2_bid = self.sim.model.body_name2id('Object2')
+            self.obj3_bid = self.sim.model.body_name2id('Object3')
+            self.obj4_bid = self.sim.model.body_name2id('Object4')
+            self.obj1_sid = self.sim.model.site_name2id('Object1')
+            self.obj2_sid = self.sim.model.site_name2id('Object2')
+            self.obj3_sid = self.sim.model.site_name2id('Object3')
+            self.obj4_sid = self.sim.model.site_name2id('Object4')
         elif self.N == 6:
             mujoco_env.MujocoEnv.__init__(self, curr_dir+'/assets/DAPG_hexa_box.xml', 5)
-
             self.obj1_bid = self.sim.model.body_name2id('Object1')
             self.obj2_bid = self.sim.model.body_name2id('Object2')
             self.obj3_bid = self.sim.model.body_name2id('Object3')
             self.obj4_bid = self.sim.model.body_name2id('Object4')
             self.obj5_bid = self.sim.model.body_name2id('Object5')
-
             self.obj1_sid = self.sim.model.site_name2id('Object1')
             self.obj2_sid = self.sim.model.site_name2id('Object2')
             self.obj3_sid = self.sim.model.site_name2id('Object3')
@@ -136,8 +168,12 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         if self.N == 1:
             object_name_list = ['Object']
+        elif self.N == 2:
+            object_name_list = ['Object', 'Object1']
         elif self.N == 3:
             object_name_list = ['Object', 'Object1', 'Object3']
+        elif self.N == 5:
+            object_name_list = ['Object', 'Object1', 'Object2', 'Object3', 'Object4']
         elif self.N == 6:
             object_name_list = ['Object', 'Object1', 'Object2', 'Object3', 'Object4', 'Object5']
         else:
@@ -200,6 +236,13 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                                     waypoint_pos - obj_pos, 
                                     obj_pos-goal_pos
                                     ])
+        elif self.N == 2:
+            obj1_pos = self.data.body_xpos[self.obj1_bid].ravel()
+            return np.concatenate([qp[:-6], palm_pos-goal_pos, palm_pos - waypoint_pos,
+                palm_pos - obj_pos, palm_pos - obj1_pos, 
+                waypoint_pos - obj_pos, waypoint_pos - obj1_pos,
+                obj_pos - goal_pos, obj1_pos - goal_pos
+                ])
         elif self.N == 3:
             obj1_pos = self.data.body_xpos[self.obj1_bid].ravel()
             obj3_pos = self.data.body_xpos[self.obj3_bid].ravel()
@@ -208,6 +251,16 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                 waypoint_pos - obj_pos, waypoint_pos - obj1_pos, waypoint_pos - obj3_pos,
                 obj_pos - goal_pos, obj1_pos - goal_pos,  obj3_pos - goal_pos
                 ])
+        elif self.N == 5:
+            obj1_pos = self.data.body_xpos[self.obj1_bid].ravel()
+            obj2_pos = self.data.body_xpos[self.obj2_bid].ravel()
+            obj3_pos = self.data.body_xpos[self.obj3_bid].ravel()
+            obj4_pos = self.data.body_xpos[self.obj4_bid].ravel()
+            return np.concatenate([qp[:-6], palm_pos-goal_pos, palm_pos - waypoint_pos,
+                palm_pos - obj_pos, palm_pos - obj1_pos, palm_pos - obj2_pos, palm_pos - obj3_pos, palm_pos - obj4_pos, 
+                waypoint_pos - obj_pos, waypoint_pos - obj1_pos, waypoint_pos - obj2_pos, waypoint_pos - obj3_pos, waypoint_pos - obj4_pos, 
+                obj_pos - goal_pos, obj1_pos - goal_pos,  obj2_pos - goal_pos, obj3_pos - goal_pos, obj4_pos - goal_pos
+                ])   
         elif self.N == 6:
             obj1_pos = self.data.body_xpos[self.obj1_bid].ravel()
             obj2_pos = self.data.body_xpos[self.obj2_bid].ravel()
@@ -229,14 +282,27 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.set_state(qp, qv)
         self.model.body_pos[self.obj_bid, 0] = self.np_random.uniform(low = -0.25, high = 0.25)
         self.model.body_pos[self.obj_bid, 1] = self.np_random.uniform(low = 0.00, high = 0.3)
-
-        if self.N == 3:
+        if self.N == 2:
+            self.model.body_pos[self.obj1_bid, 0] = self.model.body_pos[self.obj_bid, 0]
+            self.model.body_pos[self.obj1_bid, 1] = self.model.body_pos[self.obj_bid, 1] + 0.02
+        elif self.N == 3:
             self.model.body_pos[self.obj1_bid, 0] = self.model.body_pos[self.obj_bid, 0]
             self.model.body_pos[self.obj1_bid, 1] = self.model.body_pos[self.obj_bid, 1] + 0.02
 
             self.model.body_pos[self.obj3_bid, 0] = self.model.body_pos[self.obj_bid, 0]
             self.model.body_pos[self.obj3_bid, 1] = self.model.body_pos[self.obj_bid, 1] + 0.01
-
+        elif self.N == 5:
+            self.model.body_pos[self.obj1_bid, 0] = self.model.body_pos[self.obj_bid, 0]
+            self.model.body_pos[self.obj1_bid, 1] = self.model.body_pos[self.obj_bid, 1] + 0.02
+    
+            self.model.body_pos[self.obj2_bid, 0] = self.model.body_pos[self.obj_bid, 0]
+            self.model.body_pos[self.obj2_bid, 1] = self.model.body_pos[self.obj_bid, 1] -0.02
+    
+            self.model.body_pos[self.obj3_bid, 0] = self.model.body_pos[self.obj_bid, 0]
+            self.model.body_pos[self.obj3_bid, 1] = self.model.body_pos[self.obj_bid, 1] + 0.01
+    
+            self.model.body_pos[self.obj4_bid, 0] = self.model.body_pos[self.obj_bid, 0]
+            self.model.body_pos[self.obj4_bid, 1] = self.model.body_pos[self.obj_bid, 1] -0.01
         elif self.N == 6:
             self.model.body_pos[self.obj1_bid, 0] = self.model.body_pos[self.obj_bid, 0]
             self.model.body_pos[self.obj1_bid, 1] = self.model.body_pos[self.obj_bid, 1] + 0.02
@@ -279,10 +345,23 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             return dict(hand_qpos=hand_qpos, obj_pos=obj_pos,
                         goal_pos=goal_pos, waypoint_pos = waypoint_pos, 
                         palm_pos=palm_pos,qpos=qp, qvel=qv)
+        elif self.N == 2:
+            obj1_pos = self.data.body_xpos[self.obj1_bid].ravel()
+            return dict(hand_qpos=hand_qpos, obj_pos=obj_pos, obj1_pos = obj1_pos, 
+                        goal_pos=goal_pos, waypoint_pos = waypoint_pos, palm_pos=palm_pos,
+                        qpos=qp, qvel=qv)
         elif self.N == 3:
             obj1_pos = self.data.body_xpos[self.obj1_bid].ravel()
             obj3_pos = self.data.body_xpos[self.obj3_bid].ravel()
             return dict(hand_qpos=hand_qpos, obj_pos=obj_pos, obj1_pos = obj1_pos, obj3_pos = obj3_pos, 
+                        goal_pos=goal_pos, waypoint_pos = waypoint_pos, palm_pos=palm_pos,
+                        qpos=qp, qvel=qv)
+        elif self.N == 5:
+            obj1_pos = self.data.body_xpos[self.obj1_bid].ravel()
+            obj2_pos = self.data.body_xpos[self.obj2_bid].ravel()
+            obj3_pos = self.data.body_xpos[self.obj3_bid].ravel()
+            obj4_pos = self.data.body_xpos[self.obj4_bid].ravel()
+            return dict(hand_qpos=hand_qpos, obj_pos=obj_pos, obj1_pos = obj1_pos, obj2_pos = obj2_pos, obj3_pos = obj3_pos, obj4_pos = obj4_pos,
                         goal_pos=goal_pos, waypoint_pos = waypoint_pos, palm_pos=palm_pos,
                         qpos=qp, qvel=qv)
         elif self.N == 6:
@@ -309,14 +388,26 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.model.site_pos[self.goal_obj_sid] = goal_pos
         # self.model.body_pos[self.bowl_obj_bid] = bowl_pos
         self.model.site_pos[self.waypoint_sid] = waypoint_pos
+        if self.N == 2:
+            obj1_pos = state_dict['obj1_pos']
 
-        if self.N == 3:
+            self.model.body_pos[self.obj1_bid] = obj1_pos
+        elif self.N == 3:
             obj1_pos = state_dict['obj1_pos']
             obj3_pos = state_dict['obj3_pos']
 
             self.model.body_pos[self.obj1_bid] = obj1_pos
             self.model.body_pos[self.obj3_bid] = obj3_pos
+        elif self.N == 5:
+            obj1_pos = state_dict['obj1_pos']
+            obj2_pos = state_dict['obj2_pos']
+            obj3_pos = state_dict['obj3_pos']
+            obj4_pos = state_dict['obj4_pos']
 
+            self.model.body_pos[self.obj1_bid] = obj1_pos
+            self.model.body_pos[self.obj2_bid] = obj2_pos
+            self.model.body_pos[self.obj3_bid] = obj3_pos
+            self.model.body_pos[self.obj4_bid] = obj4_pos
         elif self.N == 6:
             obj1_pos = state_dict['obj1_pos']
             obj2_pos = state_dict['obj2_pos']
@@ -364,3 +455,6 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                 num_success += 1
         success_percentage = 100.0 * num_success / num_paths
         return success_percentage
+    
+    def set_number_of_objects(self, N):
+        self.__init__(N)

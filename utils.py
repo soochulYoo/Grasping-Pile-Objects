@@ -21,7 +21,7 @@ def update_params():
     ...
 
 class Demo:
-    def __init__(self, env_name = 'grasp-v0', origin_path = './demonstrations/relocate-v0_demos.pickle'):
+    def __init__(self, env = 'grasp-v0', origin_path = './demonstrations/relocate-v0_demos.pickle'):
         '''
             origin demo -> single origin demo -> agent -> single demo(best policy)
                 copy: actions, init state dict(object pos, waypoint pos, goal pos)
@@ -33,8 +33,12 @@ class Demo:
         
         
         '''
-        self.env = make_env(env_name)
+        if type(env) == str:
+            self.env = make_env(env)
+        else:
+            self.env = env
         self.num_objects = self.env.env.env.N
+        print(self.num_objects)
         self.origin_demos = pickle.load(open(origin_path, 'rb'))
         self.reset()
     
@@ -115,7 +119,7 @@ class Demo:
             
             self.env.set_env_state(state_dict)
             actions = self.total_demos[demo_idx]['actions']
-            self.total_demos[demo_idx]['observations'] = self.env.get_obs()
+            self.total_demos[demo_idx]['observations'] = self.env.env.get_obs()
             for action_idx, action in enumerate(actions):
                 ns, r, done, info = self.env.step(action)
                 if action_idx != len(actions) - 1:
@@ -126,6 +130,8 @@ class Demo:
 
         with open(f'./demonstrations/{self.num_objects}_origin_demo.pickle', 'wb') as handle:
             pickle.dump(self.total_demos, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        demo_path = f'./demonstrations/{self.num_objects}_origin_demo.pickle'
+        return demo_path
 
     def reset(self):
         self.total_demos = []
@@ -172,14 +178,14 @@ class Demo:
         self.reset()
         best_policy = None
         if best_policy_path == None:
-            NotImplementedError
+            raise NotImplementedError
         else:
             best_policy = pickle.load(open(best_policy_path, 'rb'))
         max_timestep = 400
         for demo_idx in range(len(self.origin_demos)):
             init_state = self.env.reset()
             initial_state_dict = self.env.get_env_state()
-            initial_get_obs = self.env.get_obs()
+            initial_get_obs = self.env.env.get_obs()
             self.total_demos[demo_idx]['init_state_dict']['waypoint_pos'] = initial_state_dict['waypoint_pos']
             self.total_demos[demo_idx]['init_state_dict']['goal_pos'] = initial_state_dict['goal_pos']
             self.total_demos[demo_idx]['observations'] = initial_get_obs
@@ -211,12 +217,13 @@ class Demo:
             done = False
             timestep = 0
             while timestep < max_timestep and done is False:
-                action = best_policy.get_action(init_state)[1]['evaluation']
-                self.total_demos[demo_idx]['actions'].append(action) 
+                action = best_policy.get_action(init_state)[1]['evaluation'] # 여기서 에러 발생, 당연하다 -> 어떻게 해야할까?
+                self.total_demos[demo_idx]['actions'] = np.append(self.total_demos[demo_idx]['actions'], action) 
                 state, reward, done, _ = self.env.step(action)
                 timestep += 1
                 self.total_demos[demo_idx]['observations'] = np.vstack((self.total_demos[demo_idx]['observations'], self.env.get_obs()))
                 self.total_demos[demo_idx]['rewards'] = np.concatenate([self.total_demos[demo_idx]['rewards'], np.array([reward])])
+                init_state = state
 
         name = None
         if self.num_objects == 2:
@@ -228,9 +235,11 @@ class Demo:
         elif self.num_objects == 6:
             name = 'Penta_to_Hexa'
         else:
-            NotImplementedError
+            raise NotImplementedError
 
         with open(f'./demonstrations/{name}_policy_demo.pickle', 'wb') as handle:
             pickle.dump(self.total_demos, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        demo_path = f'./demonstrations/{name}_policy_demo.pickle'
+        return demo_path
 
         
