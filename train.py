@@ -16,7 +16,7 @@ import pickle
 import argparse
 from env import make_env
 
-def train(args, demo_path, env = 'grasp-v0'):
+def train(args, demo_path, env = None , N = 1):
     output_direction = args.output
     if not os.path.exists(output_direction):
         os.mkdir(output_direction)
@@ -31,12 +31,13 @@ def train(args, demo_path, env = 'grasp-v0'):
     with open(exp_file, 'w') as f:
         json.dump(data, f, indent=4)
 
-    N = 1
-    if type(env) == str:
+    if env is None:
         env = make_env(data['env'])
     else:
         env = env
+    print("Env Obs dim: ", env.spec.observation_dim)
     policy = MLP(env.spec, hidden_sizes=data['policy_size'], seed=data['seed'])
+    print("Train Policy Obs dim: ", policy.n)
     baseline = MLPBaseline(env.spec, reg_coef=1e-3, batch_size=data['vf_batch_size'], epochs=data['vf_epochs'], learn_rate=data['vf_learn_rate'])
 
     if data['algorithm'] != 'NPG':
@@ -85,7 +86,8 @@ def train(args, demo_path, env = 'grasp-v0'):
                 sample_mode='trajectories',
                 num_traj=data['rl_num_traj'],
                 save_freq=data['save_freq'],
-                evaluation_rollouts=data['eval_rollouts'])
+                evaluation_rollouts=data['eval_rollouts'],
+                n = N)
     print("time taken = %f" % (timer.time()-ts))
-    best_policy_path = './results/dapg/iterations/best_policy.pickle'
+    best_policy_path = output_direction + '/iterations/best_policy.pickle'
     return best_policy_path

@@ -458,3 +458,4 @@ class GraspEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     
     def set_number_of_objects(self, N):
         self.__init__(N)
+        return self
